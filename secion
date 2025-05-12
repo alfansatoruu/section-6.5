@@ -1,14 +1,30 @@
-Buat dulu jaringan quotes-net dengan perintah:
-  podman network create quotes-net
+1. Mulai Lab
+  lab start troubleshooting-lab
 
-Setelah jaringan berhasil dibuat, jalankan ulang perintah podman run Anda:
-  podman run -d --name quotes-api-v1 --network quotes-net \
-    registry.ocp4.example.com:8443/redhattraining/wiremock
+2. Login ke Registry (Jika Belum)
+  podman login registry.ocp4.example.com:8443
 
-Perintah untuk Membuat quotes-api-v2:
-  podman run -d --name quotes-api-v2 --network quotes-net \
-    -p 8081:8080 \
-    registry.ocp4.example.com:8443/redhattraining/wiremock
+
+3. Buat Podman Network (Jika Belum Ada):
+  podman network create troubleshooting-lab
+
+Jalankan Container quotes-api-v1 dan `quotes-api-v2:
+
+4.1. quotes-api-v1:
+                    podman run -d \
+                --name quotes-api-v1 \
+                --net troubleshooting-lab \
+                registry.ocp4.example.com:8443/redhattraining/wiremock:latest
+
+4.2. quotes-api-v2 (Gunakan port 8081):
+              podman run -d \
+                --name quotes-api-v2 \
+                --net troubleshooting-lab \
+                -p 8081:8081 \
+                registry.ocp4.example.com:8443/redhattraining/wiremock:latest \
+                --port 8081
+
+
 
   Langkah-langkah Membuat nginx.conf:
         Masuk ke direktori yang sesuai:
@@ -16,6 +32,8 @@ Perintah untuk Membuat quotes-api-v2:
         Jika direktori belum ada, buat dulu dengan:
                                       mkdir -p ~/DO188/labs/troubleshooting-lab/
 
+
+5. Jalankan Container quotes-ui.
   Buat file nginx.conf:nano nginx.conf
 
   isi file nginx dengan:
@@ -43,19 +61,22 @@ Ctrl + O untuk menyimpan
 Enter untuk konfirmasi
 Ctrl + X untuk keluar
 
-Jalankan Container quotes-ui:
-  podman run -d --name quotes-ui -p 3000:8080 --network quotes-net \
-  -e QUOTES_API_VERSION=v2 \
-  -v ~/DO188/labs/troubleshooting-lab/nginx.conf:/etc/nginx/nginx.conf:Z \
-  registry.ocp4.example.com:8443/redhattraining/quotes-ui-versioning:1.0
+5.2. Jalankan Container dengan Bind Mount.
+                  podman run -d \
+                  --name quotes-ui \
+                  -p 3000:8080 \
+                  -e QUOTES_API_VERSION=v2 \
+                  --net troubleshooting-lab \
+                  -v ~/DO188/labs/troubleshooting-lab/nginx.conf:/etc/nginx/nginx.conf:Z \
+                  registry.ocp4.example.com:8443/redhattraining/quotes-ui-versioning:1.0
+CEK STATUS CONTAINER:podman ps -a
 
-  Verifikasi:podman ps
-
-periks log container:
-  podman logs quotes-ui
-  podman logs quotes-api-v1
-  podman logs quotes-api-v2
+TES API V1:podman exec quotes-ui curl -s http://localhost:8080/api/v1/quotes
+TES API V2:podman exec quotes-ui curl -s http://localhost:8080/api/v2/quotes
 
 Akses web app:
 Buka browser dan buka:
 http://localhost:3000
+
+
+SELESAIKAN LAB:lab finish troubleshooting-lab
